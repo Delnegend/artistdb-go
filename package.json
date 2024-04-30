@@ -1,0 +1,17 @@
+{
+	"name": "artistdb-go",
+	"scripts": {
+		"tw:watch": "npx tailwindcss -i ./src/frontend/style.css -o ./src/frontend/dist.css --watch",
+		"format": "pnpm prettier ./**/*.{html,css,json} --write --use-tabs true --tab-width 4 && go fmt",
+		"dev": "concurrently \"pnpm run tw:watch\" \"air\""
+	},
+	"author": "Delnegend",
+	"license": "Apache-2.0",
+	"devDependencies": {
+		"@awmottaz/prettier-plugin-void-html": "^1.5.0",
+		"concurrently": "^8.2.2",
+		"prettier": "^3.2.5",
+		"prettier-plugin-tailwindcss": "^0.5.14",
+		"tailwindcss": "^3.4.3"
+	}
+}
