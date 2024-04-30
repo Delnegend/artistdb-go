@@ -12,9 +12,14 @@
 		<div
 			class="fixed -z-10 h-screen w-full scale-125 bg-black blur-2xl brightness-50"
 		>
-			<img src="/avatar/default" class="fixed -z-10 size-full object-cover">
+			<img
+				alt="bg"
+				src="/avatar/default"
+				class="fixed -z-10 size-full object-cover"
+			>
 
 			<img
+				alt="bg"
 				src="{{ .ArtistAvatar }}"
 				class="fixed -z-10 size-full object-cover"
 			>
@@ -27,10 +32,12 @@
 				class="relative mx-auto flex w-full max-w-60 justify-center overflow-hidden rounded-full"
 			>
 				<img
+					alt="avatar"
 					src="/avatar/default"
 					class="left-0 top-0 aspect-square w-full animate-pulse rounded-full object-cover shadow-2xl"
 				>
 				<img
+					alt="avatar"
 					src="{{ .ArtistAvatar }}"
 					class="absolute left-0 top-0 aspect-square w-full rounded-full object-cover"
 				>
