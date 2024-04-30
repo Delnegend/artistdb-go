@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>{{ .Title }}</title>
+		<link rel="stylesheet" href="/style.css">
+	</head>
+
+	<body>
+		<!-- background -->
+		<div
+			class="fixed -z-10 h-screen w-full scale-125 bg-black blur-2xl brightness-50"
+		>
+			<img src="/avatar/default" class="fixed -z-10 size-full object-cover">
+
+			<img
+				src="{{ .ArtistAvatar }}"
+				class="fixed -z-10 size-full object-cover"
+			>
+		</div>
+
+		<!-- avatar and display name -->
+		<div class="mx-auto py-12">
+			<!-- avatar -->
+			<div
+				class="relative mx-auto flex w-full max-w-60 justify-center overflow-hidden rounded-full"
+			>
+				<img
+					src="/avatar/default"
+					class="left-0 top-0 aspect-square w-full animate-pulse rounded-full object-cover shadow-2xl"
+				>
+				<img
+					src="{{ .ArtistAvatar }}"
+					class="absolute left-0 top-0 aspect-square w-full rounded-full object-cover"
+				>
+			</div>
+
+			<div
+				class="display-name flex w-full flex-row items-center justify-center gap-3 py-7 text-center text-5xl font-bold text-white"
+			>
+				{{ .DisplayName }}
+			</div>
+
+			<div class="px-1rem mx-auto flex w-full max-w-96 flex-col gap-3">
+				{{ range .Links }} {{ . }} {{ end}}
+			</div>
+		</div>
+
+		<!-- <div
+        v-if="networkStatus === 'error'"
+        class="flex h-screen flex-col items-center justify-center gap-5">
+        <span class="text-5xl">🤷</span><span class="text-3xl text-white/85">Artist not found in database</span>
+    </div> -->
+	</body>
+</html>

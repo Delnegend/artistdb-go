@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+	font-display: swap;
+	font-family: "Noto Serif Display";
+	font-style: normal;
+	font-weight: 600;
+	src: url("/font/nsd-24-600.woff2") format("woff2");
+}
+
+@font-face {
+	font-display: swap;
+	font-family: "Noto Serif";
+	font-style: normal;
+	font-weight: 400;
+	src: url("/font/ns-23-regular.woff2") format("woff2");
+}
+
+@font-face {
+	font-display: swap;
+	font-family: "Noto Serif";
+	font-style: normal;
+	font-weight: 500;
+	src: url("/font/ns-23-500.woff2") format("woff2");
+}
+
+@font-face {
+	font-display: swap;
+	font-family: "Noto Serif";
+	font-style: normal;
+	font-weight: 600;
+	src: url("/font/ns-23-600.woff2") format("woff2");
+}
+
+@font-face {
+	font-display: swap;
+	font-family: "Noto Serif";
+	font-style: normal;
+	font-weight: 700;
+	src: url("/font/ns-23-700.woff2") format("woff2");
+}
+
+@font-face {
+	font-display: swap;
+	font-family: "TCF";
+	src: url("/font/TwemojiCountryFlags.woff2") format("woff2");
+}
+
+* {
+	font-family: "Noto Serif", sans-serif;
+}
+
+.display-name {
+	font-family: "TCF", "Noto Serif Display", "Twemoji Country Flags", sans-serif;
+	font-weight: 600;
+}
+
+.both {
+	transition-property: background, color, border, font-weight;
+	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	transition-duration: 150ms;
+}
+
+.normal-link {
+	@apply border-4 border-solid border-white/20 text-white/60 hover:border-black hover:bg-black hover:text-white;
+}
+
+.special-link {
+	@apply bg-[length:200%_200%] bg-left text-black/70 shadow-2xl hover:bg-right;
+
+	background: linear-gradient(
+		323deg,
+		#ff7777,
+		#e3ff00,
+		#00ff42,
+		#73d9ff,
+		#fd00ff
+	);
+}
