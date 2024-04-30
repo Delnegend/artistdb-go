@@ -19,6 +19,7 @@ func GetArtist(appState *utils.AppState) func(w http.ResponseWriter, r *http.Req
 			http.Error(w, "invalid username", http.StatusBadRequest)
 			return
 		}
+		username = strings.ToLower(username)
 
 		// check if file exists
 		filePath := path.Join(appState.GetOutDir(), username)
