@@ -1,0 +1,22 @@
+services:
+    artistdb-go:
+        container_name: artistdb-go
+        image: artistdb-go
+        build:
+            context: .
+            dockerfile: Dockerfile
+        pull_policy: never
+        ports:
+            - "8080:8080"
+        restart: unless-stopped
+        volumes:
+            - ./artists.txt:/app/artists.txt
+            - ./artists:/app/artists
+            - ./avatars:/app/avatars
+        environment:
+            PORT: 8080
+            IN_FILE: ./artists.txt
+            OUT_DIR: ./artists
+            AVATAR_DIR: ./avatars
+            FORMAT_AND_EXIT: false
+            FALLBACK_AVATAR:
