@@ -811,7 +811,8 @@ video {
 }
 
 .display-name {
-  font-family: "TCF", "Noto Serif Display", "Twemoji Country Flags", sans-serif;
+  font-family: "TCF", "Noto Serif Display", "Twemoji Country Flags",
+		sans-serif;
   font-weight: 600;
 }
 
