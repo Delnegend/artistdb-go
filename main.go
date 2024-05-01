@@ -106,6 +106,7 @@ func main() {
 		}
 	}()
 
+	http.HandleFunc("GET /", routes.GetIndex)
 	http.HandleFunc("GET /{username}", routes.GetArtist(appState))
 	http.HandleFunc("GET /style.css", routes.StyleCSS)
 	http.HandleFunc("GET /avatar/{fileName}", routes.GetAvatar(appState))
