@@ -24,16 +24,14 @@ func GetArtist(appState *utils.AppState) func(w http.ResponseWriter, r *http.Req
 		// check if file exists
 		filePath := path.Join(appState.GetOutDir(), username)
 		if _, err := os.Stat(filePath); err != nil {
-			http.Error(w, "artist not found", http.StatusNotFound)
-			slog.Error(err.Error())
+			appState.ArtistNotFoundTmpl.Tmpl.Execute(w, nil)
 			return
 		}
 
 		// read the file
 		file, err := os.ReadFile(filePath)
 		if err != nil {
-			http.Error(w, "artist not found", http.StatusNotFound)
-			slog.Error(err.Error())
+			appState.ArtistNotFoundTmpl.Tmpl.Execute(w, nil)
 			return
 		}
 
@@ -42,8 +40,7 @@ func GetArtist(appState *utils.AppState) func(w http.ResponseWriter, r *http.Req
 		if strings.HasPrefix(data, "@") {
 			file, err := os.ReadFile(path.Join(appState.GetOutDir(), data[1:]))
 			if err != nil {
-				http.Error(w, "avatar not found", http.StatusNotFound)
-				slog.Error(err.Error())
+				appState.ArtistNotFoundTmpl.Tmpl.Execute(w, nil)
 				return
 			}
 			data = string(file)

@@ -15,8 +15,9 @@ type AppState struct {
 	fallbackAvatar string
 	formatAndExit  bool
 
-	SocialLinkTmpl *HTMLTemplate
-	ArtistPageTmpl *HTMLTemplate
+	SocialLinkTmpl     *HTMLTemplate
+	ArtistPageTmpl     *HTMLTemplate
+	ArtistNotFoundTmpl *HTMLTemplate
 }
 
 func NewAppState() (*AppState, error) {
@@ -61,6 +62,11 @@ func NewAppState() (*AppState, error) {
 	}
 	as.ArtistPageTmpl = &HTMLTemplate{}
 	if err := as.ArtistPageTmpl.Read("./src/frontend/index.html"); err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+	as.ArtistNotFoundTmpl = &HTMLTemplate{}
+	if err := as.ArtistNotFoundTmpl.Read("./src/frontend/not_found.html"); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
