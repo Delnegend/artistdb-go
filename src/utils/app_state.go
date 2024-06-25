@@ -59,7 +59,16 @@ func NewAppState() (*AppState, error) {
 	if as.inFile == "" {
 		as.inFile = "artists.txt"
 	}
+	fileStat, err := os.Stat(as.inFile)
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
 	}
+	if fileStat.IsDir() {
+		slog.Error(as.inFile + " is a directory")
+		os.Exit(1)
+	}
+
 	as.avatarDir = os.Getenv("AVATAR_DIR")
 	if as.avatarDir == "" {
 		as.avatarDir = "avatars"
