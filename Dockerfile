@@ -10,7 +10,7 @@ RUN go build -o main .
 FROM alpine:latest
 
 WORKDIR /app
-COPY --from=builder /app/src/frontend ./src/frontend
+COPY --from=builder /app/frontend ./frontend
 COPY --from=builder /app/main .
 
 CMD ["./main"]
