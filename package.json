@@ -10,8 +10,8 @@
 	"devDependencies": {
 		"@awmottaz/prettier-plugin-void-html": "^1.5.0",
 		"concurrently": "^8.2.2",
-		"prettier": "^3.2.5",
+		"prettier": "^3.3.2",
 		"prettier-plugin-tailwindcss": "^0.5.14",
-		"tailwindcss": "^3.4.3"
+		"tailwindcss": "^3.4.4"
 	}
 }
