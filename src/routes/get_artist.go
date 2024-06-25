@@ -1,73 +1,47 @@
 package routes
 
 import (
+	"artistdb-go/src/artist"
 	"artistdb-go/src/utils"
+	"database/sql"
+	"errors"
 	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
-	"os"
-	"path"
-	"regexp"
 	"strings"
 )
 
 func GetArtist(appState *utils.AppState) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username := r.PathValue("username")
-		if match, _ := regexp.MatchString(`[^a-zA-Z0-9\._]`, username); match {
-			http.Error(w, "invalid username", http.StatusBadRequest)
-			return
-		}
-		username = strings.ToLower(username)
+		username := strings.ToLower(r.PathValue("username"))
 
-		// check if file exists
-		filePath := path.Join(appState.GetOutDir(), username)
-		if _, err := os.Stat(filePath); err != nil {
-			appState.ArtistNotFoundTmpl.Tmpl.Execute(w, nil)
-			return
-		}
-
-		// read the file
-		file, err := os.ReadFile(filePath)
+		aliasModel := new(artist.AliasDB)
+		err := appState.DB.NewSelect().Model(aliasModel).Where("alias = ?", username).Scan(r.Context())
 		if err != nil {
-			appState.ArtistNotFoundTmpl.Tmpl.Execute(w, nil)
-			return
-		}
-
-		// if file is an alias
-		data := string(file)
-		if strings.HasPrefix(data, "@") {
-			file, err := os.ReadFile(path.Join(appState.GetOutDir(), data[1:]))
-			if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
 				appState.ArtistNotFoundTmpl.Tmpl.Execute(w, nil)
 				return
 			}
-			data = string(file)
-		}
-
-		lines := strings.Split(data, "\n")
-
-		// prepare display name and avatar
-		infoLine := strings.Split(lines[0], ",")
-		if len(infoLine) != 2 {
-			http.Error(w, "invalid artist file", http.StatusBadRequest)
+			slog.Error("failed to get artist", "err", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
-		displayName := infoLine[0]
 
-		avatar := infoLine[1]
-		if strings.HasPrefix(avatar, "/") {
-			avatar = "/avatar" + avatar
-		} else {
-			avatar = "https://unavatar.io/" + avatar + "?size=400"
-			if appState.GetFallbackAvatar() != "" {
-				avatar += "&fallback=" + appState.GetFallbackAvatar()
+		artistModel := new(artist.ArtistDB)
+		err = appState.DB.NewSelect().Model(artistModel).Where("id = ?", aliasModel.ID).Scan(r.Context())
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				slog.Error("alias found but artist not found", "alias", username)
+				appState.ArtistNotFoundTmpl.Tmpl.Execute(w, nil)
+				return
 			}
+			slog.Error("failed to get artist", "err", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
 		}
 
-		// prepare social links
-		socialLines := lines[1:]
+		socialLines := strings.Split(artistModel.Socials, "\n")
 		socials := make([]template.HTML, 0, len(socialLines))
 		for _, socialLine := range socialLines {
 			isSpecial := false
@@ -77,7 +51,7 @@ func GetArtist(appState *utils.AppState) func(w http.ResponseWriter, r *http.Req
 			}
 			socialInfo := strings.Split(socialLine, ",")
 			if len(socialInfo) != 2 {
-				http.Error(w, "invalid artist file", http.StatusBadRequest)
+				http.Error(w, "DB contains invalid social line", http.StatusInternalServerError)
 				slog.Error("invalid social line", "artist", username, "line", socialLine)
 				return
 			}
@@ -88,10 +62,15 @@ func GetArtist(appState *utils.AppState) func(w http.ResponseWriter, r *http.Req
 			}))
 		}
 
+		avatar := artistModel.Avatar
+		if strings.HasPrefix(avatar, "//") {
+			avatar = "https:" + avatar
+		}
 		appState.ArtistPageTmpl.Execute(w, utils.IndexPageFields{
-			Title:        fmt.Sprintf("%s | ArtistDB", displayName),
+			Title:        fmt.Sprintf("%s | ArtistDB", artistModel.DisplayName),
+			Favicon:      avatar,
 			ArtistAvatar: avatar,
-			DisplayName:  displayName,
+			DisplayName:  artistModel.DisplayName,
 			Links:        socials,
 		})
 	}
