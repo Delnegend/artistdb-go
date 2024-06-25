@@ -1,7 +1,7 @@
 {
 	"name": "artistdb-go",
 	"scripts": {
-		"tw:watch": "npx tailwindcss -i ./src/frontend/style.css -o ./src/frontend/dist.css --watch",
+		"tw:watch": "npx tailwindcss -i ./frontend/style.css -o ./frontend/dist.css --watch --minify",
 		"format": "pnpm prettier ./**/*.{html,css,json} --write --use-tabs true --tab-width 4 && go fmt",
 		"dev": "concurrently \"pnpm run tw:watch\" \"air\""
 	},
