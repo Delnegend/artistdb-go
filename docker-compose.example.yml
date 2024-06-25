@@ -16,7 +16,4 @@ services:
         environment:
             PORT: 8080
             IN_FILE: ./artists.txt
-            OUT_DIR: ./artists
-            AVATAR_DIR: ./avatars
-            FORMAT_AND_EXIT: false
-            FALLBACK_AVATAR:
+            AVATAR_DIR: ./avatar
