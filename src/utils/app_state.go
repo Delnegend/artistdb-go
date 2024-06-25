@@ -55,6 +55,7 @@ func NewAppState() (*AppState, error) {
 		os.Exit(1)
 	}
 	as.port = port
+
 	as.inFile = os.Getenv("IN_FILE")
 	if as.inFile == "" {
 		as.inFile = "artists.txt"
