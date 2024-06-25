@@ -1,40 +1,143 @@
 package artist
 
 import (
-	"artistdb-go/src/socials"
 	"artistdb-go/src/utils"
+	"context"
 	"fmt"
 	"log/slog"
+	"regexp"
+	"sort"
 	"strings"
+	"time"
+
+	"github.com/uptrace/bun"
 )
 
-type Artist struct {
-	Username    string
-	DisplayName string
-	Avatar      string
-	Alias       []string
-	Socials     []Social
+var (
+	WRONG_AVATAR_FORMAT = "avatar must have a format of username@socialcode, leave empty or use underscore to auto infer"
+)
 
+type SlogErr struct {
+	Message string
+	Props   []any
+}
+
+type ArtistDB struct {
+	bun.BaseModel `bun:"table:artist"`
+
+	ID          string `bun:"id,pk,unique,notnull"`
+	DisplayName string `bun:"display_name"`
+	Avatar      string `bun:"avatar"`
+	Socials     string `bun:"socials"`
+
+	Aliases []string `bun:"-"`
+}
+
+type AliasDB struct {
+	bun.BaseModel `bun:"table:alias"`
+
+	Alias string `bun:"alias,unique,pk"`
+	ID    string `bun:"artist_id,notnull"`
+}
+
+// ParseToNewDB parses the artist string and returns a map of artists. Key: pointer
+// to username, Value: Artist struct.
+func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr) {
+	// reset database & temp vars
+	startTimer := time.Now()
+	if err := appState.DB.
+		ResetModel(
+			context.Background(),
+			(*ArtistDB)(nil), (*AliasDB)(nil)); err != nil {
+		return 0, &SlogErr{
+			Message: err.Error(),
+		}
+	}
+	appState.UsernameSet = make(map[string]struct{})
+	appState.AliasSet = make(map[string]struct{})
+	slog.Info("reset DB, clear temp vars", "time", time.Since(startTimer))
+
+	// split, rm empty lines, sort
+	rgx, _ := regexp.Compile(`\n{2,}`)
+	artistRawStrings := rgx.Split(artistString, -1)
+	sort.Slice(artistRawStrings, func(i, j int) bool {
+		return artistRawStrings[i] < artistRawStrings[j]
+	})
+
+	// parse artists into DB models
+	startTimer = time.Now()
+	artistsToDB := make([]ArtistDB, 0)
+	for _, artistString := range artistRawStrings {
+		artist := Artist{}
+		artistModel, err := artist.Unmarshal(appState, artistString)
+		if err != nil {
+			return 0, err
+		}
+		artistsToDB = append(artistsToDB, artistModel)
+	}
+	slog.Info("artists parsed to DB models", "time", time.Since(startTimer))
+
+	// insert into DB
+	startTimer = time.Now()
+	if _, err := appState.DB.NewInsert().
+		Model(&artistsToDB).
+		Exec(context.Background()); err != nil {
+		return 0, &SlogErr{
+			Message: err.Error(),
+		}
+	}
+	slog.Info("artists inserted into DB", "time", time.Since(startTimer))
+
+	// prepare alias into DB models
+	aliasesToDB := make([]AliasDB, 0)
+	for _, artist := range artistsToDB {
+		for _, alias := range artist.Aliases {
+			aliasesToDB = append(aliasesToDB, AliasDB{
+				ID:    artist.ID,
+				Alias: alias,
+			})
+		}
+		aliasesToDB = append(aliasesToDB, AliasDB{
+			ID:    artist.ID,
+			Alias: artist.ID,
+		})
+	}
+
+	// insert
+	startTimer = time.Now()
+	if _, err := appState.DB.NewInsert().
+		Model(&aliasesToDB).
+		Exec(context.Background()); err != nil {
+		return 0, &SlogErr{
+			Message: err.Error(),
+		}
+	}
+	slog.Info("aliases inserted into DB", "time", time.Since(startTimer))
+
+	appState.UsernameSet = make(map[string]struct{})
+	appState.AliasSet = make(map[string]struct{})
+	return len(artistsToDB), nil
+}
+
+type Artist struct {
 	Original string
 }
 
-var (
-	WRONG_AVATAR_FORMAT  = "avatar must have a format of username@socialcode, leave empty or use underscore to auto infer"
-	UNAVATAR_NOT_SUPPORT = "this social code is not supported for unavatar"
-)
+// Unmarshal parses the artists.txt and inserts into database
+func (artist *Artist) Unmarshal(appState *utils.AppState, rawString string) (ArtistDB, *SlogErr) {
+	artist.Original = rawString
 
-func (artist *Artist) Unmarshal(supportedSocials *socials.Supported, artistStrign string) *utils.SlogError {
 	// split, rm empty lines, check length
 	lines := make([]string, 0)
-	for _, line := range strings.Split(artistStrign, "\n") {
+	for _, line := range strings.Split(rawString, "\n") {
 		if line != "" {
 			lines = append(lines, line)
 		}
 	}
 	if len(lines) < 2 {
-		return &utils.SlogError{
+		return ArtistDB{}, &SlogErr{
 			Message: "artist has no social info",
-			Errors:  []any{"artist", artistStrign},
+			Props:   []any{"artist", rawString},
 		}
 	}
 
@@ -42,134 +145,140 @@ func (artist *Artist) Unmarshal(supportedSocials *socials.Supported, artistStrig
 	infoData := strings.Split(lines[0], ",")
 	artist.Original = lines[0]
 
-	// username
-	if len(infoData) > 0 {
-		artist.Username = strings.ToLower(infoData[0])
-		artist.DisplayName = artist.Username
+	// username, display name & check duplicate username
+	var username, displayName string
+	username = strings.ToLower(infoData[0])
+	if (len(infoData) > 1) && (infoData[1] != "") && (infoData[1] != "_") {
+		displayName = infoData[1]
+	} else {
+		displayName = username
 	}
-
-	// display name
-	if len(infoData) > 1 {
-		artist.DisplayName = infoData[1]
-	}
-	if artist.DisplayName == "" || artist.DisplayName == "_" {
-		artist.DisplayName = artist.Username
-	}
-
-	// avatar
-	if len(infoData) > 2 {
-		autoInfer := infoData[2] == "_"
-		usingAtSocial := strings.Contains(infoData[2], "@")
-		usingAbsPath := strings.HasPrefix(infoData[2], "/")
-
-		if !autoInfer && !usingAtSocial && !usingAbsPath {
-			return &utils.SlogError{
-				Message: WRONG_AVATAR_FORMAT,
-				Errors:  []any{"artist", artist.Username, "avatar", infoData[2]},
-			}
+	if _, ok := appState.UsernameSet[username]; ok {
+		return ArtistDB{}, &SlogErr{
+			Message: "duplicate username found in username pool",
+			Props:   []any{"artist", username},
 		}
+	}
+	if _, ok := appState.AliasSet[username]; ok {
+		return ArtistDB{}, &SlogErr{
+			Message: "username found in alias pool",
+			Props:   []any{"artist", username},
+		}
+	}
+	appState.UsernameSet[username] = struct{}{}
 
-		if usingAtSocial {
-			components := strings.Split(infoData[2], "@")
-			if len(components) != 2 {
-				return &utils.SlogError{
-					Message: WRONG_AVATAR_FORMAT,
-					Errors:  []any{"artist", artist.Username, "avatar", infoData[2]},
+	// alias & check duplicate
+	alias := func() []string {
+		aliasMap := make(map[string]struct{}, 0)
+		if len(infoData) > 3 {
+			for i := 3; i < len(infoData); i++ {
+				if infoData[i] != "" {
+					aliasMap[strings.ToLower(infoData[i])] = struct{}{}
 				}
 			}
-
-			socialUsername := components[0]
-			socialCode := components[1]
-			if socialCode == "x" {
-				socialCode = "twitter"
+		}
+		aliasSlice := make([]string, 0)
+		for alias := range aliasMap {
+			aliasSlice = append(aliasSlice, alias)
+		}
+		return aliasSlice
+	}()
+	for _, alias := range alias {
+		if _, ok := appState.UsernameSet[alias]; ok {
+			return ArtistDB{}, &SlogErr{
+				Message: "alias found in username pool",
+				Props:   []any{"artist", username, "alias", alias},
 			}
-
-			if !(*supportedSocials).IsUnavatarSupported(socialCode) {
-				return &utils.SlogError{
-					Message: UNAVATAR_NOT_SUPPORT,
-					Errors:  []any{"artist", artist.Username, "social", socialCode},
-				}
-			}
-
-			artist.Avatar = fmt.Sprintf("%s/%s", socialCode, socialUsername)
-		} else if usingAbsPath {
-			artist.Avatar = infoData[2]
-		} else if autoInfer {
-			artist.Avatar = ""
 		}
 
-		// using auto-infer -> left blank, handle after parsing socials done
-	}
-
-	// alias
-	artist.Alias = make([]string, 0)
-	if len(infoData) > 3 {
-		for i := 3; i < len(infoData); i++ {
-			if infoData[i] != "" {
-				artist.Alias = append(artist.Alias, strings.ToLower(infoData[i]))
+		if _, ok := appState.AliasSet[alias]; ok {
+			return ArtistDB{}, &SlogErr{
+				Message: "duplicate alias found in alias pool",
+				Props:   []any{"artist", username, "alias", alias},
 			}
 		}
+		appState.AliasSet[alias] = struct{}{}
 	}
 
 	// socials
-	artist.Socials = make([]Social, 0)
+	socials := make([]Social, 0)
 next_social:
 	for _, social := range lines[1:] {
 		artistSocial := Social{}
-		if err := artistSocial.Unmarshal(supportedSocials, artist.Username, social); err != nil {
-			slog.Error((*err).Message, (*err).Errors...)
+		if err := artistSocial.Unmarshal(appState, username, social); err != nil {
+			slog.Error((*err).Message, (*err).Props...)
 			continue next_social
 		}
-		artist.Socials = append(artist.Socials, artistSocial)
+		socials = append(socials, artistSocial)
 	}
 
-	// handle auto-infer avatar
-	if artist.Avatar == "" {
-		for _, artistSocial := range artist.Socials {
-			if !supportedSocials.IsUnavatarSupported(artistSocial.SocialCode) {
-				continue
+	// avatar
+	var avatar string
+	if len(infoData) > 2 {
+		autoInfer := infoData[2] == "_" || infoData[2] == ""
+		usingAtSocial := strings.Contains(infoData[2], "@")
+		usingAbsPath := strings.HasPrefix(infoData[2], "/")
+
+		switch {
+		case usingAtSocial:
+			components := strings.Split(infoData[2], "@")
+			if len(components) != 2 {
+				return ArtistDB{}, &SlogErr{
+					Message: WRONG_AVATAR_FORMAT,
+					Props:   []any{"artist", username, "avatar", infoData[2]},
+				}
 			}
-			socialCode := artistSocial.SocialCode
-			if socialCode == "x" {
-				socialCode = "twitter"
+
+			result, err := appState.SupportedSocials.
+				ToUnavatarLink(components[0], components[1])
+			if err != nil {
+				return ArtistDB{}, &SlogErr{
+					Message: err.Error(),
+					Props:   []any{"artist", username, "social", components[1]},
+				}
 			}
-			artist.Avatar = fmt.Sprintf("%s/%s", socialCode, artistSocial.Username)
-			break
+			avatar = result
+		case usingAbsPath:
+			avatar = fmt.Sprintf("/avatar%s", infoData[2])
+		case autoInfer:
+			for _, social := range socials {
+				result, err := appState.SupportedSocials.
+					ToUnavatarLink(social.Username, social.SocialCode)
+				if err != nil {
+					continue
+				}
+				avatar = result
+				break
+			}
+			if avatar == "" {
+				return ArtistDB{}, &SlogErr{
+					Message: "could not infer avatar from socials",
+					Props:   []any{"artist", username, "socials", socials},
+				}
+			}
+		default:
+			return ArtistDB{}, &SlogErr{
+				Message: WRONG_AVATAR_FORMAT,
+				Props:   []any{"artist", username, "avatar", infoData[2]},
+			}
 		}
 	}
-	if artist.Avatar == "" {
-		return &utils.SlogError{
-			Message: "could not infer avatar from socials",
-			Errors:  []any{"artist", artist.Username, "socials", artist.Socials},
-		}
-	}
 
-	return nil
-}
-
-// Returns a map of file names to content to write
-func (artist *Artist) Marshal(supportedSocials *socials.Supported) (map[string]string, error) {
-	if artist.Username == "" || artist.DisplayName == "" || artist.Avatar == "" {
-		return nil, fmt.Errorf("can't marshal artist with empty username, display name, or avatar")
-	}
-
-	infoLine := fmt.Sprintf("%s,%s", artist.DisplayName, artist.Avatar)
-
-	socialLines := make([]string, 0)
-	for _, social := range artist.Socials {
-		socialLine, err := social.Marshal(supportedSocials)
+	socialsMarshaled := make([]string, 0)
+	for _, social := range socials {
+		socialMarshaled, err := social.Marshal()
 		if err != nil {
-			slog.Warn("can't marshal social", "artist", artist.Username, "error", err.Error(), "social", social)
+			slog.Error("can't marshal social", "artist", username, "error", err.Error(), "social", social)
+			continue
 		}
-		socialLines = append(socialLines, socialLine)
+		socialsMarshaled = append(socialsMarshaled, socialMarshaled)
 	}
 
-	result := map[string]string{
-		artist.Username: fmt.Sprintf("%s\n%s", infoLine, strings.Join(socialLines, "\n"))}
-
-	for _, alias := range artist.Alias {
-		result[alias] = fmt.Sprintf("@%s", artist.Username)
-	}
-
-	return result, nil
+	return ArtistDB{
+		ID:          username,
+		DisplayName: displayName,
+		Avatar:      avatar,
+		Socials:     strings.Join(socialsMarshaled, "\n"),
+		Aliases:     alias,
+	}, nil
 }
