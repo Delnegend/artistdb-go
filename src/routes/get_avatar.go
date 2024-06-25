@@ -2,40 +2,42 @@ package routes
 
 import (
 	"artistdb-go/src/utils"
+	"io/fs"
 	"log/slog"
 	"net/http"
-	"os"
-	"path"
-	"regexp"
+	"path/filepath"
 )
 
 func GetAvatar(appState *utils.AppState) func(w http.ResponseWriter, r *http.Request) {
+	filesInAvatarDir := make(map[string]struct{})
+	err := filepath.WalkDir(appState.GetAvatarDir(), func(path string, d fs.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case d.IsDir():
+			return nil
+		default:
+			filesInAvatarDir[d.Name()] = struct{}{}
+			return nil
+		}
+	})
+	if err != nil {
+		slog.Error("can't scan avatar dir", "error", err.Error())
+		return func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		fileName := r.PathValue("fileName")
+		if fileName == "" || fileName == "default" {
+			http.ServeFile(w, r, "./frontend/avatar.svg")
 
-		if fileName == "default" {
-			if _, err := os.Stat("./src/frontend/avatar.svg"); err != nil {
-				http.Error(w, "avatar.svg not found", http.StatusNotFound)
-				slog.Error(err.Error())
-				return
-			}
-			http.ServeFile(w, r, "./src/frontend/avatar.svg")
-			return
+		}
+		if _, ok := filesInAvatarDir[fileName]; ok {
+			http.ServeFile(w, r, fileName)
 		}
 
-		if match, _ := regexp.MatchString(`[^a-zA-Z0-9\._]`, fileName); match {
-			http.Error(w, "invalid file name", http.StatusBadRequest)
-			return
-		}
-
-		// check file exists in AVATAR_DIR
-		filePath := path.Join(appState.GetAvatarDir(), fileName)
-		if _, err := os.Stat(filePath); err != nil {
-			http.Error(w, "avatar not found", http.StatusNotFound)
-			slog.Error(err.Error())
-			return
-		}
-
-		http.ServeFile(w, r, filePath)
+		http.Error(w, "avatar not found", http.StatusNotFound)
 	}
 }
