@@ -59,20 +59,11 @@ func NewAppState() (*AppState, error) {
 	if as.inFile == "" {
 		as.inFile = "artists.txt"
 	}
-	as.outDir = os.Getenv("OUT_DIR")
-	if as.outDir == "" {
-		as.outDir = "artists"
 	}
 	as.avatarDir = os.Getenv("AVATAR_DIR")
 	if as.avatarDir == "" {
 		as.avatarDir = "avatars"
 	}
-	as.formatAndExit = false
-	formatAndExit := os.Getenv("FORMAT_AND_EXIT")
-	if strings.ToLower(formatAndExit) == "true" {
-		as.formatAndExit = true
-	}
-	as.fallbackAvatar = os.Getenv("FALLBACK_AVATAR")
 
 	as.SocialLinkTmpl = &HTMLTemplate{}
 	if err := as.SocialLinkTmpl.Read("./src/frontend/link.html"); err != nil {
