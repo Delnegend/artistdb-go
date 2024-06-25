@@ -1,10 +1,15 @@
 package utils
 
 import (
+	"database/sql"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/sqlitedialect"
+	"github.com/uptrace/bun/driver/sqliteshim"
 )
 
 type AppState struct {
@@ -19,12 +24,25 @@ type AppState struct {
 	// To check duplicate usernames and aliases
 	UsernameSet map[string]struct{}
 	AliasSet    map[string]struct{}
+
+	DB *bun.DB
 }
 
 func NewAppState() (*AppState, error) {
 	as := AppState{
 		port: "8080",
 	}
+
+	sqldbPath := os.Getenv("SQLITE")
+	if sqldbPath == "" {
+		sqldbPath = "./sqlite.db?mode=rwc"
+	}
+	sqldb, err := sql.Open(sqliteshim.ShimName, sqldbPath)
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+	as.DB = bun.NewDB(sqldb, sqlitedialect.New())
 
 	port := os.Getenv("PORT")
 	portInt, err := strconv.Atoi(port)
