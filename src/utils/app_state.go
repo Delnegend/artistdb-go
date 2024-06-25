@@ -8,12 +8,9 @@ import (
 )
 
 type AppState struct {
-	port           string
-	inFile         string
-	outDir         string
-	avatarDir      string
-	fallbackAvatar string
-	formatAndExit  bool
+	port      string
+	inFile    string
+	avatarDir string
 
 	SocialLinkTmpl     *HTMLTemplate
 	ArtistPageTmpl     *HTMLTemplate
@@ -77,23 +74,9 @@ func NewAppState() (*AppState, error) {
 func (as *AppState) GetPort() string {
 	return as.port
 }
-
 func (as *AppState) GetInFile() string {
 	return as.inFile
 }
-
-func (as *AppState) GetOutDir() string {
-	return as.outDir
-}
-
 func (as *AppState) GetAvatarDir() string {
 	return as.avatarDir
-}
-
-func (as *AppState) GetFallbackAvatar() string {
-	return as.fallbackAvatar
-}
-
-func (as *AppState) GetFormatAndExit() bool {
-	return as.formatAndExit
 }
