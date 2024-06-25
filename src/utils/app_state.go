@@ -24,6 +24,8 @@ type AppState struct {
 	UsernameSet map[string]struct{}
 	AliasSet    map[string]struct{}
 
+	SupportedSocials SupportedSocials
+
 	DB *bun.DB
 }
 
@@ -89,6 +91,8 @@ func NewAppState() (*AppState, error) {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
+
+	as.SupportedSocials = NewSocialDBInstance()
 
 	return &as, nil
 }

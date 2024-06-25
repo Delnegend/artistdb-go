@@ -1,23 +1,25 @@
-package socials
+package utils
 
 import (
 	"fmt"
 	"strings"
 )
 
+// Social
 type Social struct {
 	DisplayName string
 	Profile     string
 }
 
-type Supported struct {
+// SupportedSocials
+type SupportedSocials struct {
 	unavatar map[string]Social
 	extended map[string]Social
 	special  map[string]bool
 }
 
-func NewInstance() Supported {
-	return Supported{
+func NewSocialDBInstance() SupportedSocials {
+	return SupportedSocials{
 		unavatar: map[string]Social{
 			"deviantart":    {"DeviantArt", "deviantart.com/<@>"},
 			"dribbble":      {"Dribbble", "dribbble.com/<@>"},
@@ -35,7 +37,7 @@ func NewInstance() Supported {
 			"subscribestar": {"SubscribeStar", "subscribestar.adult/<@>"},
 			"substack":      {"Substack", "<@>.substack.com/"},
 			"telegram":      {"Telegram", "t.me/<@>"},
-			"twitter":       {"𝕏", "twitter.com/<@>"},
+			"x":             {"𝕏", "x.com/<@>"},
 			"youtube":       {"YouTube", "youtube.com/@<@>"},
 		},
 		extended: map[string]Social{
@@ -73,74 +75,50 @@ func NewInstance() Supported {
 	}
 }
 
-func (supported *Supported) IsUnavatarSupported(socialCode string) bool {
-	if socialCode == "x" {
-		return true
+func (ss *SupportedSocials) ToUnavatarLink(username, socialCode string) (string, error) {
+	if _, ok := ss.unavatar[socialCode]; ok {
+		return fmt.Sprintf("//unavatar.io/%s/%s", socialCode, username), nil
 	}
-	if _, ok := supported.unavatar[socialCode]; ok {
-		return true
-	}
-	return false
-}
-func (supported *Supported) IsSupported(socialCode string) bool {
-	if socialCode == "x" {
-		return true
-	}
-	if _, ok := supported.unavatar[socialCode]; ok {
-		return true
-	}
-	if _, ok := supported.extended[socialCode]; ok {
-		return true
-	}
-	return false
+	return "", fmt.Errorf("social code not found to create avatar link")
 }
 
-func (supported *Supported) ToProfileLink(username, socialCode string) (string, error) {
-	if socialCode == "x" {
-		socialCode = "twitter"
+func (ss *SupportedSocials) ToProfileLink(username, socialCode string) (string, error) {
+	if _, ok := ss.unavatar[socialCode]; ok {
+		return strings.Replace(ss.unavatar[socialCode].Profile, "<@>", username, 1), nil
 	}
-	if _, ok := supported.unavatar[socialCode]; ok {
-		return strings.Replace(supported.unavatar[socialCode].Profile, "<@>", username, 1), nil
-	}
-	if _, ok := supported.extended[socialCode]; ok {
-		return strings.Replace(supported.extended[socialCode].Profile, "<@>", username, 1), nil
+	if _, ok := ss.extended[socialCode]; ok {
+		return strings.Replace(ss.extended[socialCode].Profile, "<@>", username, 1), nil
 	}
 	return "", fmt.Errorf("social code not found to create profile link")
 }
 
-func (supported *Supported) FormatDescription(socialCode, description string) (string, error) {
+func (ss *SupportedSocials) FormatDescription(socialCode, description string) (string, error) {
 	var socialName string
 
 	// find social display name
-	if social, ok := supported.unavatar[socialCode]; ok {
+	if social, ok := ss.unavatar[socialCode]; ok {
 		socialName = social.DisplayName
 	}
 	if socialName == "" {
-		if social, ok := supported.extended[socialCode]; ok {
+		if social, ok := ss.extended[socialCode]; ok {
 			socialName = social.DisplayName
 		}
 	}
 
-	// no social name, return description
-	if socialName == "" && description != "" {
+	switch {
+	case socialName == "" && description != "":
 		return description, nil
-	}
-
-	// have social name, no description
-	if socialName != "" && description == "" {
+	case socialName != "" && description == "":
 		return socialName, nil
-	}
-
-	// have both
-	if socialName != "" && description != "" {
+	case socialName != "" && description != "":
 		return fmt.Sprintf("%s | %s", socialName, description), nil
+	default:
+		return "", fmt.Errorf("social code not found, description is empty, can't format new description")
 	}
-
-	return "", fmt.Errorf("social code not found, description is empty, can't format new description")
 }
 
-func (supported *Supported) IsSpecial(socialCode string) bool {
-	if _, ok := supported.special[socialCode]; ok {
+func (ss *SupportedSocials) IsSpecial(socialCode string) bool {
+	if _, ok := ss.special[socialCode]; ok {
 		return true
 	}
 	return false
