@@ -75,17 +75,17 @@ func NewAppState() (*AppState, error) {
 	}
 
 	as.SocialLinkTmpl = &HTMLTemplate{}
-	if err := as.SocialLinkTmpl.Read("./src/frontend/link.html"); err != nil {
+	if err := as.SocialLinkTmpl.Read("./frontend/link.html"); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
 	as.ArtistPageTmpl = &HTMLTemplate{}
-	if err := as.ArtistPageTmpl.Read("./src/frontend/index.html"); err != nil {
+	if err := as.ArtistPageTmpl.Read("./frontend/index.html"); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
 	as.ArtistNotFoundTmpl = &HTMLTemplate{}
-	if err := as.ArtistNotFoundTmpl.Read("./src/frontend/not_found.html"); err != nil {
+	if err := as.ArtistNotFoundTmpl.Read("./frontend/not_found.html"); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
