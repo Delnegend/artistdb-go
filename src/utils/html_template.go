@@ -40,6 +40,7 @@ func (tmpl *HTMLTemplate) RenderAsHTML(data interface{}) template.HTML {
 
 type IndexPageFields struct {
 	Title         string
+	Favicon       string
 	DefaultAvatar string
 	ArtistAvatar  string
 	DisplayName   string
