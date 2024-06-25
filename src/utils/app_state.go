@@ -15,6 +15,10 @@ type AppState struct {
 	SocialLinkTmpl     *HTMLTemplate
 	ArtistPageTmpl     *HTMLTemplate
 	ArtistNotFoundTmpl *HTMLTemplate
+
+	// To check duplicate usernames and aliases
+	UsernameSet map[string]struct{}
+	AliasSet    map[string]struct{}
 }
 
 func NewAppState() (*AppState, error) {
