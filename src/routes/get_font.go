@@ -15,7 +15,7 @@ func GetFont(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fontPath := path.Clean("./src/frontend/fonts/" + fontName)
+	fontPath := path.Clean("./frontend/fonts/" + fontName)
 	if _, err := os.Stat(fontPath); err != nil {
 		http.Error(w, fontName+" not found", http.StatusNotFound)
 		slog.Error(err.Error())
