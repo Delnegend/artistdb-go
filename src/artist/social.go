@@ -61,6 +61,9 @@ func (social *Social) Unmarshal(
 		}
 		social.Username = subSlice[0]
 		social.SocialCode = subSlice[1]
+		if appState.SupportedSocials.IsSpecial(social.SocialCode) {
+			social.IsSpecial = true
+		}
 
 		socialLink, err := appState.SupportedSocials.
 			ToProfileLink(social.Username, social.SocialCode)
