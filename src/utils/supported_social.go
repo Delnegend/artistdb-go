@@ -79,7 +79,7 @@ func (ss *SupportedSocials) ToUnavatarLink(username, socialCode string) (string,
 	if _, ok := ss.unavatar[socialCode]; ok {
 		return fmt.Sprintf("//unavatar.io/%s/%s", socialCode, username), nil
 	}
-	return "", fmt.Errorf("social code not found to create avatar link")
+	return "", fmt.Errorf("SupportedSocials.ToUnavatarLink: social code not found to create avatar link")
 }
 
 func (ss *SupportedSocials) ToProfileLink(username, socialCode string) (string, error) {
@@ -89,7 +89,7 @@ func (ss *SupportedSocials) ToProfileLink(username, socialCode string) (string, 
 	if _, ok := ss.extended[socialCode]; ok {
 		return strings.Replace(ss.extended[socialCode].Profile, "<@>", username, 1), nil
 	}
-	return "", fmt.Errorf("social code not found to create profile link")
+	return "", fmt.Errorf("SupportedSocials.ToProfileLink: social code not found to create profile link")
 }
 
 func (ss *SupportedSocials) FormatDescription(socialCode, description string) (string, error) {
@@ -113,7 +113,7 @@ func (ss *SupportedSocials) FormatDescription(socialCode, description string) (s
 	case socialName != "" && description != "":
 		return fmt.Sprintf("%s | %s", socialName, description), nil
 	default:
-		return "", fmt.Errorf("social code not found, description is empty, can't format new description")
+		return "", fmt.Errorf("SupportedSocials.FormatDescription: social code not found, description is empty, can't format new description")
 	}
 }
 

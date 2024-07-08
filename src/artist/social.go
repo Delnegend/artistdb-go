@@ -26,7 +26,7 @@ func (social *Social) Unmarshal(
 	slice := strings.Split(rawString, ",")
 	if len(slice) < 1 || len(slice) > 2 {
 		return &SlogErr{
-			Message: WRONG_SOCIAL_FORMAT,
+			Message: "Social.Unmarshal: " + WRONG_SOCIAL_FORMAT,
 			Props:   []any{"artist", username, "social", rawString, "kind", "split with ,", "split result", slice},
 		}
 	}
@@ -44,7 +44,7 @@ func (social *Social) Unmarshal(
 	case usingCustomLink:
 		if len(slice) < 2 {
 			return &SlogErr{
-				Message: "custom social link needs a description",
+				Message: "Social.Unmarshal: custom social link needs a description",
 				Props:   []any{"artist", username, "social", rawString},
 			}
 		}
@@ -55,7 +55,7 @@ func (social *Social) Unmarshal(
 		subSlice := strings.Split(slice[0], "@")
 		if len(subSlice) != 2 {
 			return &SlogErr{
-				Message: WRONG_SOCIAL_FORMAT,
+				Message: "Social.Unmarshal: " + WRONG_SOCIAL_FORMAT,
 				Props:   []any{"artist", username, "social", rawString, "kind", "split with @", "split result", subSlice},
 			}
 		}
@@ -66,7 +66,7 @@ func (social *Social) Unmarshal(
 			ToProfileLink(social.Username, social.SocialCode)
 		if err != nil {
 			return &SlogErr{
-				Message: err.Error(),
+				Message: "Social.Unmarshal: " + err.Error(),
 				Props:   []any{"artist", username, "socialCode", social.SocialCode},
 			}
 		}
@@ -80,14 +80,14 @@ func (social *Social) Unmarshal(
 			FormatDescription(social.SocialCode, description)
 		if err != nil {
 			return &SlogErr{
-				Message: err.Error(),
+				Message: "Social.Unmarshal: " + err.Error(),
 				Props:   []any{"artist", username, "socialCode", social.SocialCode},
 			}
 		}
 		social.Description = description
 	default:
 		return &SlogErr{
-			Message: WRONG_SOCIAL_FORMAT,
+			Message: "Social.Unmarshal: " + WRONG_SOCIAL_FORMAT,
 			Props:   []any{"artist", username, "social", rawString, "kind", "not using @ or //"},
 		}
 	}
@@ -101,6 +101,6 @@ func (social *Social) Marshal() (string, error) {
 	case social.Link != "" && social.Description != "":
 		return fmt.Sprintf("%s,%s", social.Link, social.Description), nil
 	default:
-		return "", fmt.Errorf("social link and description are empty")
+		return "", fmt.Errorf("Social.Marshal: social link and description are empty")
 	}
 }

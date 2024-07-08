@@ -15,6 +15,7 @@ import (
 
 var (
 	WRONG_AVATAR_FORMAT = "avatar must have a format of username@socialcode, leave empty or use underscore to auto infer"
+	DOUBLE_NEWLINE_RGX  = regexp.MustCompile(`\n{2,}`)
 )
 
 type SlogErr struct {
@@ -50,7 +51,7 @@ func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr)
 			context.Background(),
 			(*ArtistDB)(nil), (*AliasDB)(nil)); err != nil {
 		return 0, &SlogErr{
-			Message: err.Error(),
+			Message: "ParseToNewDB: " + err.Error(),
 		}
 	}
 	appState.UsernameSet = make(map[string]struct{})
@@ -58,8 +59,7 @@ func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr)
 	slog.Info("reset DB, clear temp vars", "time", time.Since(startTimer))
 
 	// split, rm empty lines, sort
-	rgx, _ := regexp.Compile(`\n{2,}`)
-	artistRawStrings := rgx.Split(artistString, -1)
+	artistRawStrings := DOUBLE_NEWLINE_RGX.Split(artistString, -1)
 	sort.Slice(artistRawStrings, func(i, j int) bool {
 		return artistRawStrings[i] < artistRawStrings[j]
 	})
@@ -83,7 +83,7 @@ func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr)
 		Model(&artistsToDB).
 		Exec(context.Background()); err != nil {
 		return 0, &SlogErr{
-			Message: err.Error(),
+			Message: "ParseToNewDB: " + err.Error(),
 		}
 	}
 	slog.Info("artists inserted into DB", "time", time.Since(startTimer))
@@ -109,7 +109,7 @@ func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr)
 		Model(&aliasesToDB).
 		Exec(context.Background()); err != nil {
 		return 0, &SlogErr{
-			Message: err.Error(),
+			Message: "ParseToNewDB: " + err.Error(),
 		}
 	}
 	slog.Info("aliases inserted into DB", "time", time.Since(startTimer))
@@ -136,7 +136,7 @@ func (artist *Artist) Unmarshal(appState *utils.AppState, rawString string) (Art
 	}
 	if len(lines) < 2 {
 		return ArtistDB{}, &SlogErr{
-			Message: "artist has no social info",
+			Message: "Artist.Unmarshal: artist has no social info",
 			Props:   []any{"artist", rawString},
 		}
 	}
@@ -155,13 +155,13 @@ func (artist *Artist) Unmarshal(appState *utils.AppState, rawString string) (Art
 	}
 	if _, ok := appState.UsernameSet[username]; ok {
 		return ArtistDB{}, &SlogErr{
-			Message: "duplicate username found in username pool",
+			Message: "Artist.Unmarshal: duplicate username found in username pool",
 			Props:   []any{"artist", username},
 		}
 	}
 	if _, ok := appState.AliasSet[username]; ok {
 		return ArtistDB{}, &SlogErr{
-			Message: "username found in alias pool",
+			Message: "Artist.Unmarshal: username found in alias pool",
 			Props:   []any{"artist", username},
 		}
 	}
@@ -186,14 +186,14 @@ func (artist *Artist) Unmarshal(appState *utils.AppState, rawString string) (Art
 	for _, alias := range alias {
 		if _, ok := appState.UsernameSet[alias]; ok {
 			return ArtistDB{}, &SlogErr{
-				Message: "alias found in username pool",
+				Message: "Artist.Unmarshal: alias found in username pool",
 				Props:   []any{"artist", username, "alias", alias},
 			}
 		}
 
 		if _, ok := appState.AliasSet[alias]; ok {
 			return ArtistDB{}, &SlogErr{
-				Message: "duplicate alias found in alias pool",
+				Message: "Artist.Unmarshal: duplicate alias found in alias pool",
 				Props:   []any{"artist", username, "alias", alias},
 			}
 		}
@@ -224,7 +224,7 @@ next_social:
 			components := strings.Split(infoData[2], "@")
 			if len(components) != 2 {
 				return ArtistDB{}, &SlogErr{
-					Message: WRONG_AVATAR_FORMAT,
+					Message: "Artist.Unmarshal: " + WRONG_AVATAR_FORMAT,
 					Props:   []any{"artist", username, "avatar", infoData[2]},
 				}
 			}
@@ -233,7 +233,7 @@ next_social:
 				ToUnavatarLink(components[0], components[1])
 			if err != nil {
 				return ArtistDB{}, &SlogErr{
-					Message: err.Error(),
+					Message: "Artist.Unmarshal: " + err.Error(),
 					Props:   []any{"artist", username, "social", components[1]},
 				}
 			}
@@ -252,13 +252,13 @@ next_social:
 			}
 			if avatar == "" {
 				return ArtistDB{}, &SlogErr{
-					Message: "could not infer avatar from socials",
+					Message: "Artist.Unmarshal: could not infer avatar from socials",
 					Props:   []any{"artist", username, "socials", socials},
 				}
 			}
 		default:
 			return ArtistDB{}, &SlogErr{
-				Message: WRONG_AVATAR_FORMAT,
+				Message: "Artist.Unmarshal: " + WRONG_AVATAR_FORMAT,
 				Props:   []any{"artist", username, "avatar", infoData[2]},
 			}
 		}
