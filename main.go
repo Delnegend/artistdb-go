@@ -23,11 +23,7 @@ func init() {
 }
 
 func main() {
-	appState, err := utils.NewAppState()
-	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(1)
-	}
+	appState := utils.NewAppState()
 
 	// read file & parse
 	rawBytes, err := os.ReadFile(appState.GetInFile())
