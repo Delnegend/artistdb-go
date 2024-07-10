@@ -25,18 +25,20 @@ func init() {
 func main() {
 	appState := utils.NewAppState()
 
-	// read file & parse
-	rawBytes, err := os.ReadFile(appState.GetInFile())
-	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(1)
-	}
-	artistCount, err2 := artist.ParseToNewDB(appState, string(rawBytes))
-	if err2 != nil {
-		slog.Error(err2.Message, err2.Props...)
-		os.Exit(1)
-	}
-	slog.Info("parsed artists successfully", "count", artistCount)
+	// read file & parse for 1st time
+	func() {
+		rawBytes, err := os.ReadFile(appState.GetInFile())
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+		artistCount, err2 := artist.ParseToNewDB(appState, string(rawBytes))
+		if err2 != nil {
+			slog.Error(err2.Message, err2.Props...)
+			os.Exit(1)
+		}
+		slog.Info("parsed artists successfully", "count", artistCount)
+	}()
 
 	// watch artists.txt for changes and re-parse
 	eventInfoCh := make(chan notify.EventInfo, 1)
