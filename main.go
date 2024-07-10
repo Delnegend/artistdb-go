@@ -71,5 +71,7 @@ func main() {
 	http.HandleFunc("GET /font/{fontName}", routes.GetFont)
 
 	slog.Info("listening on port " + appState.GetPort())
-	http.ListenAndServe(":"+appState.GetPort(), nil)
+	if err := http.ListenAndServe(":"+appState.GetPort(), nil); err != nil {
+		slog.Error(err.Error())
+	}
 }
