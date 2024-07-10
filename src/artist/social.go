@@ -25,10 +25,9 @@ func (social *Social) Unmarshal(
 	// <link || username@socialcode>,description
 	slice := strings.Split(rawString, ",")
 	if len(slice) < 1 || len(slice) > 2 {
-		return &SlogErr{
-			Message: "Social.Unmarshal: " + WRONG_SOCIAL_FORMAT,
-			Props:   []any{"artist", username, "social", rawString, "kind", "split with ,", "split result", slice},
-		}
+		return NewSlogErr(
+			"Social.Unmarshal: "+WRONG_SOCIAL_FORMAT,
+			"artist", username, "social", rawString, "kind", "split with ,", "split result", slice)
 	}
 
 	// *<link || username@socialcode>,description
@@ -43,10 +42,9 @@ func (social *Social) Unmarshal(
 	switch {
 	case usingCustomLink:
 		if len(slice) < 2 {
-			return &SlogErr{
-				Message: "Social.Unmarshal: custom social link needs a description",
-				Props:   []any{"artist", username, "social", rawString},
-			}
+			return NewSlogErr(
+				"Social.Unmarshal: custom social link needs a description",
+				"artist", username, "social", rawString)
 		}
 		social.Link = slice[0]
 		social.Description = slice[1]
@@ -54,10 +52,9 @@ func (social *Social) Unmarshal(
 		// username@socialcode
 		subSlice := strings.Split(slice[0], "@")
 		if len(subSlice) != 2 {
-			return &SlogErr{
-				Message: "Social.Unmarshal: " + WRONG_SOCIAL_FORMAT,
-				Props:   []any{"artist", username, "social", rawString, "kind", "split with @", "split result", subSlice},
-			}
+			return NewSlogErr(
+				"Social.Unmarshal: "+WRONG_SOCIAL_FORMAT,
+				"artist", username, "social", rawString, "kind", "split with @", "split result", subSlice)
 		}
 		social.Username = subSlice[0]
 		social.SocialCode = subSlice[1]
@@ -68,10 +65,9 @@ func (social *Social) Unmarshal(
 		socialLink, err := appState.SupportedSocials.
 			ToProfileLink(social.Username, social.SocialCode)
 		if err != nil {
-			return &SlogErr{
-				Message: "Social.Unmarshal: " + err.Error(),
-				Props:   []any{"artist", username, "socialCode", social.SocialCode},
-			}
+			return NewSlogErr(
+				"Social.Unmarshal: "+err.Error(),
+				"artist", username, "socialCode", social.SocialCode)
 		}
 		social.Link = socialLink
 
@@ -82,17 +78,15 @@ func (social *Social) Unmarshal(
 		description, err = appState.SupportedSocials.
 			FormatDescription(social.SocialCode, description)
 		if err != nil {
-			return &SlogErr{
-				Message: "Social.Unmarshal: " + err.Error(),
-				Props:   []any{"artist", username, "socialCode", social.SocialCode},
-			}
+			return NewSlogErr(
+				"Social.Unmarshal: "+err.Error(),
+				"artist", username, "socialCode", social.SocialCode)
 		}
 		social.Description = description
 	default:
-		return &SlogErr{
-			Message: "Social.Unmarshal: " + WRONG_SOCIAL_FORMAT,
-			Props:   []any{"artist", username, "social", rawString, "kind", "not using @ or //"},
-		}
+		return NewSlogErr(
+			"Social.Unmarshal: "+WRONG_SOCIAL_FORMAT,
+			"artist", username, "social", rawString, "kind", "not using @ or //")
 	}
 	return nil
 }

@@ -23,6 +23,16 @@ type SlogErr struct {
 	Props   []any
 }
 
+func NewSlogErr(message string, props ...any) *SlogErr {
+	if props == nil {
+		props = make([]any, 0)
+	}
+	return &SlogErr{
+		Message: message,
+		Props:   props,
+	}
+}
+
 type ArtistDB struct {
 	bun.BaseModel `bun:"table:artist"`
 
@@ -49,10 +59,9 @@ func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr)
 	if err := appState.DB.
 		ResetModel(
 			context.Background(),
-			(*ArtistDB)(nil), (*AliasDB)(nil)); err != nil {
-		return 0, &SlogErr{
-			Message: "ParseToNewDB: " + err.Error(),
-		}
+			(*ArtistDB)(nil),
+			(*AliasDB)(nil)); err != nil {
+		return 0, NewSlogErr("ParseToNewDB", "err", err)
 	}
 	appState.UsernameSet = make(map[string]struct{})
 	appState.AliasSet = make(map[string]struct{})
@@ -71,7 +80,7 @@ func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr)
 		artist := Artist{}
 		artistModel, err := artist.Unmarshal(appState, artistString)
 		if err != nil {
-			return 0, err
+			return 0, NewSlogErr("ParseToNewDB", "err", err)
 		}
 		artistsToDB = append(artistsToDB, artistModel)
 	}
@@ -82,9 +91,7 @@ func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr)
 	if _, err := appState.DB.NewInsert().
 		Model(&artistsToDB).
 		Exec(context.Background()); err != nil {
-		return 0, &SlogErr{
-			Message: "ParseToNewDB: " + err.Error(),
-		}
+		return 0, NewSlogErr("ParseToNewDB", "err", err)
 	}
 	slog.Info("artists inserted into DB", "time", time.Since(startTimer))
 
@@ -108,9 +115,7 @@ func ParseToNewDB(appState *utils.AppState, artistString string) (int, *SlogErr)
 	if _, err := appState.DB.NewInsert().
 		Model(&aliasesToDB).
 		Exec(context.Background()); err != nil {
-		return 0, &SlogErr{
-			Message: "ParseToNewDB: " + err.Error(),
-		}
+		return 0, NewSlogErr("ParseToNewDB", "err", err)
 	}
 	slog.Info("aliases inserted into DB", "time", time.Since(startTimer))
 
@@ -135,10 +140,7 @@ func (artist *Artist) Unmarshal(appState *utils.AppState, rawString string) (Art
 		}
 	}
 	if len(lines) < 2 {
-		return ArtistDB{}, &SlogErr{
-			Message: "Artist.Unmarshal: artist has no social info",
-			Props:   []any{"artist", rawString},
-		}
+		return ArtistDB{}, NewSlogErr("Artist.Unmarshal", "artist", rawString)
 	}
 
 	// parse info
@@ -154,16 +156,14 @@ func (artist *Artist) Unmarshal(appState *utils.AppState, rawString string) (Art
 		displayName = username
 	}
 	if _, ok := appState.UsernameSet[username]; ok {
-		return ArtistDB{}, &SlogErr{
-			Message: "Artist.Unmarshal: duplicate username found in username pool",
-			Props:   []any{"artist", username},
-		}
+		return ArtistDB{}, NewSlogErr(
+			"Artist.Unmarshal: duplicate username found in username pool",
+			"artist", username)
 	}
 	if _, ok := appState.AliasSet[username]; ok {
-		return ArtistDB{}, &SlogErr{
-			Message: "Artist.Unmarshal: username found in alias pool",
-			Props:   []any{"artist", username},
-		}
+		return ArtistDB{}, NewSlogErr(
+			"Artist.Unmarshal: username found in alias pool",
+			"artist", username)
 	}
 	appState.UsernameSet[username] = struct{}{}
 
@@ -185,17 +185,15 @@ func (artist *Artist) Unmarshal(appState *utils.AppState, rawString string) (Art
 	}()
 	for _, alias := range alias {
 		if _, ok := appState.UsernameSet[alias]; ok {
-			return ArtistDB{}, &SlogErr{
-				Message: "Artist.Unmarshal: alias found in username pool",
-				Props:   []any{"artist", username, "alias", alias},
-			}
+			return ArtistDB{}, NewSlogErr(
+				"Artist.Unmarshal: alias found in username pool",
+				"artist", username, "alias", alias)
 		}
 
 		if _, ok := appState.AliasSet[alias]; ok {
-			return ArtistDB{}, &SlogErr{
-				Message: "Artist.Unmarshal: duplicate alias found in alias pool",
-				Props:   []any{"artist", username, "alias", alias},
-			}
+			return ArtistDB{}, NewSlogErr(
+				"Artist.Unmarshal: duplicate alias found in alias pool",
+				"artist", username, "alias", alias)
 		}
 		appState.AliasSet[alias] = struct{}{}
 	}
@@ -223,19 +221,17 @@ next_social:
 		case usingAtSocial:
 			components := strings.Split(infoData[2], "@")
 			if len(components) != 2 {
-				return ArtistDB{}, &SlogErr{
-					Message: "Artist.Unmarshal: " + WRONG_AVATAR_FORMAT,
-					Props:   []any{"artist", username, "avatar", infoData[2]},
-				}
+				return ArtistDB{}, NewSlogErr(
+					"Artist.Unmarshal: "+WRONG_AVATAR_FORMAT,
+					"artist", username, "avatar", infoData[2])
 			}
 
 			result, err := appState.SupportedSocials.
 				ToUnavatarLink(components[0], components[1])
 			if err != nil {
-				return ArtistDB{}, &SlogErr{
-					Message: "Artist.Unmarshal: " + err.Error(),
-					Props:   []any{"artist", username, "social", components[1]},
-				}
+				return ArtistDB{}, NewSlogErr(
+					"Artist.Unmarshal: "+err.Error(),
+					"artist", username, "social", components[1])
 			}
 			avatar = result
 		case usingAbsPath:
@@ -251,16 +247,14 @@ next_social:
 				break
 			}
 			if avatar == "" {
-				return ArtistDB{}, &SlogErr{
-					Message: "Artist.Unmarshal: could not infer avatar from socials",
-					Props:   []any{"artist", username, "socials", socials},
-				}
+				return ArtistDB{}, NewSlogErr(
+					"Artist.Unmarshal: could not infer avatar from socials",
+					"artist", username, "socials", socials)
 			}
 		default:
-			return ArtistDB{}, &SlogErr{
-				Message: "Artist.Unmarshal: " + WRONG_AVATAR_FORMAT,
-				Props:   []any{"artist", username, "avatar", infoData[2]},
-			}
+			return ArtistDB{}, NewSlogErr(
+				"Artist.Unmarshal: "+WRONG_AVATAR_FORMAT,
+				"artist", username, "avatar", infoData[2])
 		}
 	}
 
