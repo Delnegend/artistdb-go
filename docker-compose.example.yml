@@ -11,8 +11,7 @@ services:
         restart: unless-stopped
         volumes:
             - ./artists.txt:/app/artists.txt
-            - ./artists:/app/artists
-            - ./avatars:/app/avatars
+            - ./avatar:/app/avatar
         environment:
             PORT: 8080
             IN_FILE: ./artists.txt
